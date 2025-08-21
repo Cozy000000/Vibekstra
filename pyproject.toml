@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vibekstra"
+version = "0.1.0"
+description = "A fun project to solve the single-source shortest path problem using AI (GPT), inspired by Dijkstra's algorithm."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file = "LICENSE" }
+
+keywords = ["ai", "gpt", "dijkstra", "shortest-path", "graph-algorithm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+
+
+dependencies = [
+    "openai>=1.0.0",
+    "pydantic>=2.0.0",
+    "typing-extensions>=4.0.0",
+    "python-dotenv>=1.0.0"  
+]
+
+[project.urls]
+Homepage = "https://github.com/Cozy000000/vibekstra" # 替换成你的项目地址
+Repository = "https://github.com/Cozy000000/vibekstra"
