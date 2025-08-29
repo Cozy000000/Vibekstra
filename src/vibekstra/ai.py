@@ -1,6 +1,7 @@
 import os
 from typing_extensions import Literal
-import openai
+import json
+import requests
 from pydantic import BaseModel, Field
 from typing import TypeVar, List
 
@@ -65,47 +66,76 @@ def vibekstra(n: int, source: int, edges: List[List[int]]) -> List[int]:
 
 T = TypeVar("T", bound=BaseModel)
 
-# Function to send a request to the OpenAI API and get a structured Pydantic model output
+# Function to send a request to the Claude API and get a structured Pydantic model output
 def structured_output(
     content: str,
     response_format: T,
-    model: str = "gpt-4.1-mini",
+    model: str = "claude-3-sonnet-20240229",
 ) -> T:
     """
-    Send a request to the OpenAI API and get a structured Pydantic model output.
+    Send a request to the Claude API and get a structured Pydantic model output.
 
     Args:
         content: The input content to send to the API
         response_format: The expected response format as a Pydantic model
-        model: The OpenAI model to use (default: "gpt-4.1-mini")
+        model: The Claude model to use (default: "claude-3-sonnet-20240229")
 
     Returns:
         A Pydantic model instance containing the structured response.
     """
-    # Retrieve the OpenAI API key from the environment variables
-    api_key = os.environ.get("OPENAI_API_KEY")
+    # Retrieve the Claude API key from the environment variables
+    api_key = os.environ.get("CLAUDE_API_KEY")
     if not api_key:
-        raise ValueError("The OPENAI_API_KEY environment variable is not set!")
+        raise ValueError("The CLAUDE_API_KEY environment variable is not set!")
         
-    # Initialize the OpenAI client with the API key
-    client = openai.OpenAI(api_key=api_key)
+    # Get the JSON schema for the response format
+    schema = response_format.model_json_schema()
+    
+    # Create the prompt with schema information
+    prompt = f"""
+{content}
 
-    # Send the request to the OpenAI API
-    response = client.beta.chat.completions.parse(
-        model=model,
-        messages=[
+Please respond with a JSON object that matches this exact schema:
+{json.dumps(schema, indent=2)}
+
+Return only the JSON object, no other text.
+"""
+
+    # Send the request to the Claude API
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01"
+    }
+    
+    data = {
+        "model": model,
+        "max_tokens": 1000,
+        "messages": [
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": content,
-                    },
-                ],
+                "content": prompt
             }
-        ],
-        response_format=response_format,
+        ]
+    }
+    
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers=headers,
+        json=data
     )
-    # Parse the response into the expected Pydantic model
-    response_model = response.choices[0].message.parsed
-    return response_model
+    
+    if response.status_code != 200:
+        raise ValueError(f"Claude API request failed: {response.status_code} - {response.text}")
+    
+    response_data = response.json()
+    content_text = response_data["content"][0]["text"]
+    
+    # Parse the JSON response
+    try:
+        json_response = json.loads(content_text)
+        return response_format(**json_response)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse JSON response: {e}\nResponse: {content_text}")
+    except Exception as e:
+        raise ValueError(f"Failed to create response model: {e}\nResponse: {content_text}")
